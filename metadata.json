@@ -1,0 +1,10 @@
+{
+  "name": "Red Tail Energy",
+  "description": "Community energy resilience hub prototype for Tompkins Hall at Tuskegee University by Red Tail Energy.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

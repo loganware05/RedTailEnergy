@@ -1,11 +1,61 @@
-<div align="center">
+# Red Tail Energy — Tompkins Hall Resilience Hub
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Community energy resilience hub prototype for **Tompkins Hall** at Tuskegee University, built for the AABE Energy Hackathon by **Red Tail Energy**.
 
-  <h1>Built with AI Studio</h2>
+Includes a campus map for cell-off / local Wi‑Fi mode, shuttle and service status, a community message board, and a walkie-talkie style staff interface — with Resident, Staff, Lead, and Engineer role views.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+Originally remixed from [Google AI Studio](https://ai.studio/apps/704b43cc-35eb-4358-874f-e36d686ec21d).
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Features
 
-</div>
+- Role home + PIN-gated staff / lead / engineer views
+- 48-hour energy simulation (battery, solar, priority loads, packs)
+- Campus and local hub maps (Google Maps when a key is configured)
+- Message board, walkie channels, demo controls drawer
+- Heritage / command / goldfield themes
+
+## Run locally
+
+**Prerequisites:** Node.js 22+ (or Bun)
+
+1. Install dependencies:
+
+   ```bash
+   npm install
+   # or: bun install
+   ```
+
+2. Copy env template and add keys:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Set:
+
+   - `GEMINI_API_KEY` — optional Gemini features
+   - `VITE_GOOGLE_MAPS_API_KEY` — Maps JS / Places / Weather
+   - `APP_URL` — optional app base URL
+
+3. Start the app:
+
+   ```bash
+   npm run dev
+   ```
+
+   Open http://localhost:3000/
+
+## Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Vite dev server on port 3000 |
+| `npm run build` | Production build → `dist/` |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Typecheck (`tsc --noEmit`) |
+
+## Notes
+
+- Do not commit `.env` / `.env.local`.
+- Readings and demo scenarios are labeled for hackathon simulation unless otherwise noted.
+- Microphone permission is requested for walkie-talkie style demos (`metadata.json`).
