@@ -1,0 +1,86 @@
+{
+  "cloudy-night": {
+    "hours": 48,
+    "site": {
+      "facility_id": "tompkins-hall",
+      "facility_name": "Tompkins Hall Resilience Hub",
+      "campus": "Tuskegee University",
+      "timezone": "America/Chicago",
+      "latitude": 32.42898750800647,
+      "longitude": -85.70454560185496,
+      "capacity_people": 250
+    },
+    "weather_source": {
+      "provider": "Open-Meteo",
+      "dataset": "ERA5 archive",
+      "url": "https://archive-api.open-meteo.com/v1/archive",
+      "period": "2026-11-14 \u2192 2026-11-16 America/Chicago",
+      "note": "GHI (shortwave radiation) and cloud cover at Tompkins Hall install point for the cloudy-night demo window. Planning solar_kw from Tompkins Plan of Action is unchanged."
+    },
+    "energy_totals": {
+      "solar_generated_kwh": 86.4,
+      "load_served_kwh": 83.596,
+      "unmet_load_kwh_total": 16.694
+    },
+    "hr4": {
+      "timestamp_local": "2026-11-14T22:00:00-06:00",
+      "sky": "storm_half_output",
+      "soc_pct": 36.76,
+      "solar_kw": 0.0,
+      "critical_load_kw": 1.9,
+      "occupancy": 42,
+      "packs": 7,
+      "ghi": 0.0,
+      "cloud_cover_pct": 0.0
+    },
+    "hr18_noonish": {
+      "timestamp_local": "2026-11-15T12:00:00-06:00",
+      "sky": "storm_half_output",
+      "solar_kw": 4.099,
+      "ghi": 669.0,
+      "cloud_cover_pct": 43.0
+    }
+  },
+  "hurricane-isaias": {
+    "hours": 48,
+    "site": {
+      "facility_id": "tompkins-hall",
+      "facility_name": "Tompkins Hall Resilience Hub",
+      "campus": "Tuskegee University",
+      "timezone": "America/Chicago",
+      "latitude": 32.42898750800647,
+      "longitude": -85.70454560185496,
+      "capacity_people": 250
+    },
+    "weather_source": {
+      "provider": "Open-Meteo Archive API",
+      "dataset": "ERA5",
+      "url": "https://archive-api.open-meteo.com/v1/archive",
+      "period": "2020-08-03T18:00 to +48h America/Chicago",
+      "note": "Isaias tracked offshore FL/GA then NC landfall; Tuskegee saw outer-band cloud/light precip in archive. Solar AC derived from observed shortwave radiation at this point."
+    },
+    "energy_totals": {
+      "solar_generated_kwh": 102.418,
+      "load_served_kwh": 76.793,
+      "unmet_load_kwh_total": 3.057
+    },
+    "hr4": {
+      "timestamp_local": "2020-08-03T22:00:00-05:00",
+      "sky": "mostly_clear",
+      "soc_pct": 39.14,
+      "solar_kw": 0.0,
+      "critical_load_kw": 2.1,
+      "occupancy": 12,
+      "packs": 7,
+      "ghi": 0.0,
+      "cloud_cover_pct": 8.0
+    },
+    "hr18_noonish": {
+      "timestamp_local": "2020-08-04T12:00:00-05:00",
+      "sky": "isaias_outer_bands",
+      "solar_kw": 6.013,
+      "ghi": 768.0,
+      "cloud_cover_pct": 56.0
+    }
+  }
+}
