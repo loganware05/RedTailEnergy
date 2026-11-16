@@ -18,6 +18,7 @@ import {
   isHubOvernightClosed,
 } from '../simulation/engine';
 import { DayWeatherSchedule, HubSimulationResult, WeatherMode } from '../types/hub';
+import { OpenRemoteTelemetryPanel } from './OpenRemoteTelemetryPanel';
 
 interface DemoControlsDrawerProps {
   open: boolean;
@@ -269,6 +270,8 @@ export function DemoControlsDrawer({
               </button>
             </div>
           </div>
+
+          <OpenRemoteTelemetryPanel currentHour={currentHour} onJumpToHour={onChangeHour} />
 
           {/* Instant Scenario Triggers */}
           <div className="space-y-2">

@@ -1,0 +1,52 @@
+{
+  "facility": "tompkins-hall",
+  "source": "openremote/core Manager assets for AABE hackathon demo",
+  "assets": [
+    {
+      "key": "battery",
+      "name": "Tompkins Stationary Battery",
+      "suggestedType": "ThingAsset",
+      "attributes": [
+        { "name": "batterySocPct", "type": "number", "unit": "%", "description": "State of charge" },
+        { "name": "batterySocKwh", "type": "number", "unit": "kWh" },
+        { "name": "batteryPowerKw", "type": "number", "unit": "kW", "description": "Positive discharge, negative charge" },
+        { "name": "projectedReserveOk", "type": "boolean" },
+        { "name": "reserveBreached", "type": "boolean" },
+        { "name": "dataQuality", "type": "text", "demoValue": "simulated" }
+      ]
+    },
+    {
+      "key": "solar",
+      "name": "Tompkins Rooftop Solar",
+      "suggestedType": "ThingAsset",
+      "attributes": [
+        { "name": "solarAcPowerKw", "type": "number", "unit": "kW" },
+        { "name": "dataQuality", "type": "text", "demoValue": "simulated" }
+      ]
+    },
+    {
+      "key": "criticalLoad",
+      "name": "Tompkins Critical Load Meter",
+      "suggestedType": "ThingAsset",
+      "attributes": [
+        { "name": "criticalLoadKw", "type": "number", "unit": "kW" },
+        { "name": "dataQuality", "type": "text", "demoValue": "simulated" }
+      ]
+    },
+    {
+      "key": "occupancy",
+      "name": "Tompkins Hub Occupancy",
+      "suggestedType": "ThingAsset",
+      "attributes": [
+        { "name": "occupancyCount", "type": "number", "unit": "people" },
+        { "name": "portablePacksAvailable", "type": "number", "unit": "count" },
+        { "name": "dataQuality", "type": "text", "demoValue": "simulated" }
+      ]
+    }
+  ],
+  "writeApi": {
+    "method": "PUT",
+    "path": "/api/{realm}/asset/attributes",
+    "auth": "OAuth2 client_credentials service user"
+  }
+}

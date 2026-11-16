@@ -12,7 +12,17 @@ Originally remixed from [Google AI Studio](https://ai.studio/apps/704b43cc-35eb-
 - 48-hour energy simulation (battery, solar, priority loads, packs)
 - Campus and local hub maps (Google Maps when a key is configured)
 - Message board, walkie channels, demo controls drawer
+- **OpenRemote simulated telemetry** embedded under Demo Presentation Controls (cloudy-night 48h package + Manager asset attributes)
 - Heritage / command / goldfield themes
+
+### OpenRemote telemetry (demo)
+
+The Demo Presentation Controls panel includes the same simulated hour series used with the companion OpenRemote Manager trial:
+
+- Replay: [`src/data/openremote/cloudy_night_48h.json`](src/data/openremote/cloudy_night_48h.json)
+- Asset attribute contract: [`src/data/openremote/asset-attributes.json`](src/data/openremote/asset-attributes.json)
+
+Scrubbing the outage timeline advances the OpenRemote hour readout (`batterySocPct`, `solarAcPowerKw`, `criticalLoadKw`, etc.). Jump buttons open the Demo 22:00 incident hour and the first reserve-breach hour.
 
 ## Run locally
 
