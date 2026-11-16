@@ -22,7 +22,10 @@ import {
   INITIAL_TRAININGS,
   INITIAL_WALKIE_MESSAGES,
 } from './data/initialState';
-import { getOpenRemoteAlignedIndicators } from './data/openremote/telemetry';
+import {
+  getOpenRemoteAlignedIndicators,
+  type OpenRemoteScenarioId,
+} from './data/openremote/telemetry';
 import {
   BATTERY_CAPACITY_KWH,
   formatOutageHour,
@@ -113,6 +116,8 @@ export default function App() {
   const [hotspotDemoEnabled, setHotspotDemoEnabled] = useState<boolean>(true);
   /** Extra SOC delta from Demo "Drain Battery" on top of OpenRemote hour SOC. */
   const [batteryDemoDeltaPct, setBatteryDemoDeltaPct] = useState<number>(0);
+  const [openRemoteScenario, setOpenRemoteScenario] =
+    useState<OpenRemoteScenarioId>('cloudy-night');
 
   // Operational state shared across all views
   const [hubOpen, setHubOpen] = useState<boolean>(true);
@@ -167,8 +172,8 @@ export default function App() {
 
   // OpenRemote cloudy-night hour is the authority for shared live indicators
   const openRemoteIndicators = useMemo(
-    () => getOpenRemoteAlignedIndicators(currentHour),
-    [currentHour]
+    () => getOpenRemoteAlignedIndicators(currentHour, openRemoteScenario),
+    [currentHour, openRemoteScenario]
   );
 
   // Headcount ↔ OpenRemote occupancy (same number in Demo Controls + OR panel)
@@ -680,8 +685,19 @@ export default function App() {
     setCurrentHour(hour);
     setHeadcountOffset(0);
     setBatteryDemoDeltaPct(0);
-    const aligned = getOpenRemoteAlignedIndicators(hour);
+    const aligned = getOpenRemoteAlignedIndicators(hour, openRemoteScenario);
     const dayKey = hour < 24 ? 'day1' : 'day2';
+    setDayWeather((prev) =>
+      prev[dayKey] === aligned.weatherMode ? prev : { ...prev, [dayKey]: aligned.weatherMode }
+    );
+  };
+
+  const handleChangeOpenRemoteScenario = (scenario: OpenRemoteScenarioId) => {
+    setOpenRemoteScenario(scenario);
+    setHeadcountOffset(0);
+    setBatteryDemoDeltaPct(0);
+    const aligned = getOpenRemoteAlignedIndicators(currentHour, scenario);
+    const dayKey = currentHour < 24 ? 'day1' : 'day2';
     setDayWeather((prev) =>
       prev[dayKey] === aligned.weatherMode ? prev : { ...prev, [dayKey]: aligned.weatherMode }
     );
@@ -763,6 +779,7 @@ export default function App() {
     setCellOverride(null);
     setHotspotDemoEnabled(true);
     setBatteryDemoDeltaPct(0);
+    setOpenRemoteScenario('cloudy-night');
     setHubOpen(true);
     setHeadcountOffset(0);
     setPorts(INITIAL_PORTS);
@@ -983,6 +1000,8 @@ export default function App() {
           onDrainBattery10={handleDrainBattery10}
           onResetDemo={handleResetDemo}
           sim={sim}
+          openRemoteScenario={openRemoteScenario}
+          onChangeOpenRemoteScenario={handleChangeOpenRemoteScenario}
         />
       </div>
     </APIProvider>

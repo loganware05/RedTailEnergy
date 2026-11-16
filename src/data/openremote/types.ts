@@ -33,6 +33,24 @@ export interface OpenRemoteReplayHour {
   portable_packs_available: number
   occupancy_count: number
   data_quality: string
+  /** Present on archive-backed scenarios (e.g. Hurricane Isaias). */
+  weather_obs?: {
+    source: string
+    latitude: number
+    longitude: number
+    shortwave_radiation_wm2: number
+    cloud_cover_pct: number
+    precipitation_mm: number
+    wind_speed_10m: number
+    temperature_2m_c: number
+    weather_code: number
+  }
+}
+
+export interface OpenRemoteEnergyTotals {
+  solar_generated_kwh: number
+  load_served_kwh: number
+  unmet_load_kwh_total: number
 }
 
 export interface OpenRemoteScenarioSummary {
@@ -47,6 +65,7 @@ export interface OpenRemoteScenarioSummary {
     reserve_kwh: number
   } | null
   unmet_load_kwh_total: number
+  energy_totals?: OpenRemoteEnergyTotals
   staff_actions: Array<{
     hour_index: number
     timestamp_local: string
@@ -54,6 +73,22 @@ export interface OpenRemoteScenarioSummary {
     reason: string
   }>
   assumptions: string[]
+  site?: {
+    facility_id?: string
+    facility_name?: string
+    campus?: string
+    timezone?: string
+    latitude?: number
+    longitude?: number
+    capacity_people?: number
+  }
+  weather_source?: {
+    provider?: string
+    dataset?: string
+    url?: string
+    period?: string
+    note?: string
+  }
 }
 
 export interface OpenRemoteReplayPackage {
