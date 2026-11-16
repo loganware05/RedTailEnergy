@@ -22,10 +22,12 @@ import {
   INITIAL_TRAININGS,
   INITIAL_WALKIE_MESSAGES,
 } from './data/initialState';
+import { getOpenRemoteAlignedIndicators } from './data/openremote/telemetry';
 import {
+  BATTERY_CAPACITY_KWH,
   formatOutageHour,
   getPackDueHour,
-  getSimulatedHeadcountForHour,
+  getShedStageForSoc,
   HUB_CAPACITY_MAX,
   HUB_CAPACITY_WARN,
   isHubOvernightClosed,
@@ -109,7 +111,8 @@ export default function App() {
   });
   const [cellOverride, setCellOverride] = useState<boolean | null>(null);
   const [hotspotDemoEnabled, setHotspotDemoEnabled] = useState<boolean>(true);
-  const [batteryOffsetPct, setBatteryOffsetPct] = useState<number>(0);
+  /** Extra SOC delta from Demo "Drain Battery" on top of OpenRemote hour SOC. */
+  const [batteryDemoDeltaPct, setBatteryDemoDeltaPct] = useState<number>(0);
 
   // Operational state shared across all views
   const [hubOpen, setHubOpen] = useState<boolean>(true);
@@ -158,27 +161,106 @@ export default function App() {
     setEvents((prev) => [nextEvt, ...prev]);
   };
 
-  // Overnight closed rule: hub is a day support location (closed 9 PM to 7 AM; 0-5 staff only)
+  // Overnight closed rule: hub is a day support location (closed 9 PM to 7 AM)
   const isOvernightClosed = isHubOvernightClosed(currentHour);
   const effectiveHubOpen = hubOpen && !isOvernightClosed;
-  const simulatedBaseHeadcount = getSimulatedHeadcountForHour(currentHour);
-  const maxAllowedHeadcount = isOvernightClosed ? 5 : HUB_CAPACITY_MAX;
-  const headcount = Math.max(0, Math.min(maxAllowedHeadcount, simulatedBaseHeadcount + headcountOffset));
+
+  // OpenRemote cloudy-night hour is the authority for shared live indicators
+  const openRemoteIndicators = useMemo(
+    () => getOpenRemoteAlignedIndicators(currentHour),
+    [currentHour]
+  );
+
+  // Headcount ↔ OpenRemote occupancy (same number in Demo Controls + OR panel)
+  const simulatedBaseHeadcount = openRemoteIndicators.occupancyCount;
+  const maxAllowedHeadcount = HUB_CAPACITY_MAX;
+  const headcount = Math.max(
+    0,
+    Math.min(maxAllowedHeadcount, simulatedBaseHeadcount + headcountOffset)
+  );
 
   // Cell service: off for hours 0-12, on after hour 12 unless manually toggled in Demo Controls
   const cellServiceUp = cellOverride !== null ? cellOverride : currentHour > 12;
 
-  // Run full 48-hour microgrid simulation
-  const sim = useMemo(
-    () =>
-      run48HourSimulation({
-        currentHour,
-        weather: dayWeather,
-        overrides,
-        batteryOffsetPct,
-        generatorRecharges,
-      }),
-    [currentHour, dayWeather, overrides, batteryOffsetPct, generatorRecharges]
+  // Run full 48-hour microgrid simulation, then overlay OpenRemote live readouts
+  const sim = useMemo(() => {
+    const base = run48HourSimulation({
+      currentHour,
+      weather: dayWeather,
+      overrides,
+      batteryOffsetPct: 0,
+      generatorRecharges,
+    });
+
+    const batteryPct = Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(openRemoteIndicators.batterySocPct + batteryDemoDeltaPct)
+      )
+    );
+    const batteryKwh = Number(
+      (
+        openRemoteIndicators.batterySocKwh +
+        (batteryDemoDeltaPct / 100) * BATTERY_CAPACITY_KWH
+      ).toFixed(1)
+    );
+    const solarKw = Number(openRemoteIndicators.solarAcPowerKw.toFixed(2));
+    const totalLoadKw = Number(openRemoteIndicators.criticalLoadKw.toFixed(2));
+    const shedStage = getShedStageForSoc(batteryPct);
+    const hoursRemaining =
+      totalLoadKw > 0.01 ? Number((batteryKwh / totalLoadKw).toFixed(1)) : 99;
+
+    let healthColor: typeof base.healthColor = 'green';
+    let healthLabel = 'Healthy';
+    if (batteryPct <= 15) {
+      healthColor = 'red';
+      healthLabel = 'Critical Reserve';
+    } else if (batteryPct <= 50) {
+      healthColor = 'yellow';
+      healthLabel = 'Conservation';
+    }
+
+    const currentPoint = {
+      ...base.currentPoint,
+      solarKw,
+      loadKw: totalLoadKw,
+      batteryPct,
+      shedStage,
+    };
+
+    const hourlySeries = base.hourlySeries.map((pt) =>
+      pt.hour === currentHour ? { ...pt, ...currentPoint, hour: pt.hour } : pt
+    );
+
+    return {
+      ...base,
+      hourlySeries,
+      currentPoint,
+      solarKw,
+      totalLoadKw,
+      batteryPct,
+      batteryKwh,
+      hoursRemaining,
+      healthColor,
+      healthLabel,
+      shedStage,
+      shedExplanation: openRemoteIndicators.phonesShed
+        ? `${base.shedExplanation} OpenRemote replay: phone charging shed for this hour.`
+        : base.shedExplanation,
+    };
+  }, [
+    currentHour,
+    dayWeather,
+    overrides,
+    generatorRecharges,
+    openRemoteIndicators,
+    batteryDemoDeltaPct,
+  ]);
+
+  const packsReady = useMemo(
+    () => batteryPacks.filter((p) => p.status === 'available').length,
+    [batteryPacks]
   );
 
   // Merge time-progressive simulated medical queue with live resident submissions & staff actions
@@ -254,7 +336,7 @@ export default function App() {
       list.push({
         id: 'alert-overnight-closed',
         severity: 'info',
-        title: `Closed Overnight · Staff Only (${headcount}/5)`,
+        title: `Closed Overnight · Staff Only (OpenRemote occupancy ${headcount})`,
         detail: 'Tompkins Hall opens for daytime community support at 7:00 AM.',
       });
     } else if (headcount >= HUB_CAPACITY_MAX) {
@@ -357,12 +439,17 @@ export default function App() {
       const prevCount = Math.max(0, Math.min(maxAllowedHeadcount, simulatedBaseHeadcount + prevOffset));
       const nextCount = Math.max(0, Math.min(maxAllowedHeadcount, prevCount + delta));
       if (nextCount !== prevCount) {
-        if (!isOvernightClosed && nextCount >= HUB_CAPACITY_MAX && prevCount < HUB_CAPACITY_MAX) {
+        if (nextCount >= HUB_CAPACITY_MAX && prevCount < HUB_CAPACITY_MAX) {
           appendEvent(currentHour, 'Staff', 'Capacity', 'Hub reached 250/250 maximum capacity; new check-ins blocked.');
-        } else if (!isOvernightClosed && nextCount >= HUB_CAPACITY_WARN && prevCount < HUB_CAPACITY_WARN) {
+        } else if (nextCount >= HUB_CAPACITY_WARN && prevCount < HUB_CAPACITY_WARN) {
           appendEvent(currentHour, 'Staff', 'Capacity', `Occupancy reached ${nextCount}/250 warning threshold.`);
         } else if (Math.abs(delta) >= 25) {
-          appendEvent(currentHour, 'Demo', 'Capacity', `Demo adjusted occupancy by ${delta > 0 ? `+${delta}` : delta} to ${nextCount}/250.`);
+          appendEvent(
+            currentHour,
+            'Demo',
+            'Capacity',
+            `Demo adjusted occupancy by ${delta > 0 ? `+${delta}` : delta} to ${nextCount}/250 (OpenRemote occupancy aligned).`
+          );
         }
       }
       return nextCount - simulatedBaseHeadcount;
@@ -563,7 +650,7 @@ export default function App() {
       ...prev.filter((g) => g.status !== 'requested'),
       completed,
     ]);
-    setBatteryOffsetPct((prev) => Math.min(0, prev + 35));
+    setBatteryDemoDeltaPct((prev) => prev + 35);
     appendEvent(
       currentHour,
       'Hub Lead',
@@ -579,20 +666,25 @@ export default function App() {
 
   // Demo Controls Handlers
   const handleDrainBattery10 = () => {
-    const nextOffset = batteryOffsetPct - 10;
-    setBatteryOffsetPct(nextOffset);
+    setBatteryDemoDeltaPct((prev) => prev - 10);
     const projectedPct = Math.max(0, sim.batteryPct - 10);
     appendEvent(
       currentHour,
       'Demo',
       'Load Shed',
-      `Demo drained battery by 10% (now ~${projectedPct}%). Automatic shed rules re-evaluated.`
+      `Demo drained battery by 10% (now ~${projectedPct}%). OpenRemote SOC readout stays aligned.`
     );
   };
 
   const handleChangeHour = (hour: number) => {
     setCurrentHour(hour);
     setHeadcountOffset(0);
+    setBatteryDemoDeltaPct(0);
+    const aligned = getOpenRemoteAlignedIndicators(hour);
+    const dayKey = hour < 24 ? 'day1' : 'day2';
+    setDayWeather((prev) =>
+      prev[dayKey] === aligned.weatherMode ? prev : { ...prev, [dayKey]: aligned.weatherMode }
+    );
   };
 
   const handleToggleDayWeather = (day: 'day1' | 'day2', nextWeather: WeatherMode) => {
@@ -670,7 +762,7 @@ export default function App() {
     setDayWeather({ day1: 'storm', day2: 'clear' });
     setCellOverride(null);
     setHotspotDemoEnabled(true);
-    setBatteryOffsetPct(0);
+    setBatteryDemoDeltaPct(0);
     setHubOpen(true);
     setHeadcountOffset(0);
     setPorts(INITIAL_PORTS);
@@ -886,6 +978,7 @@ export default function App() {
           hotspotUp={hotspotUp}
           onToggleHotspot={handleToggleHotspot}
           headcount={headcount}
+          packsReady={packsReady}
           onAddPeople={handleChangeHeadcount}
           onDrainBattery10={handleDrainBattery10}
           onResetDemo={handleResetDemo}

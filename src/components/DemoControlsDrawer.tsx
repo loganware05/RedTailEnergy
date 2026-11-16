@@ -32,6 +32,7 @@ interface DemoControlsDrawerProps {
   hotspotUp: boolean;
   onToggleHotspot: (up: boolean) => void;
   headcount: number;
+  packsReady: number;
   onAddPeople: (delta: number) => void;
   onDrainBattery10: () => void;
   onResetDemo: () => void;
@@ -50,6 +51,7 @@ export function DemoControlsDrawer({
   hotspotUp,
   onToggleHotspot,
   headcount,
+  packsReady,
   onAddPeople,
   onDrainBattery10,
   onResetDemo,
@@ -121,10 +123,10 @@ export function DemoControlsDrawer({
             </div>
             <div>
               <div className="text-xs text-charcoal-muted">
-                {overnightClosed ? 'Staff Overnight' : 'Headcount'}
+                {overnightClosed ? 'Occupancy (OR)' : 'Headcount'}
               </div>
               <div className="text-lg font-bold tabular-nums text-charcoal">
-                {headcount} / {overnightClosed ? '5' : HUB_CAPACITY_MAX}
+                {headcount} / {HUB_CAPACITY_MAX}
               </div>
             </div>
           </div>
@@ -271,7 +273,18 @@ export function DemoControlsDrawer({
             </div>
           </div>
 
-          <OpenRemoteTelemetryPanel currentHour={currentHour} onJumpToHour={onChangeHour} />
+          <OpenRemoteTelemetryPanel
+            currentHour={currentHour}
+            onJumpToHour={onChangeHour}
+            shared={{
+              occupancyCount: headcount,
+              batterySocPct: sim.batteryPct,
+              batterySocKwh: sim.batteryKwh,
+              solarAcPowerKw: sim.solarKw,
+              criticalLoadKw: sim.totalLoadKw,
+              portablePacksAvailable: packsReady,
+            }}
+          />
 
           {/* Instant Scenario Triggers */}
           <div className="space-y-2">

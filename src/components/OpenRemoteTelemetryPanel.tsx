@@ -7,9 +7,22 @@ import {
 } from '../data/openremote/telemetry'
 import { OR_ATTRIBUTES } from '../data/openremote/types'
 
+interface SharedIndicators {
+  /** Must match Demo Controls / role Headcount. */
+  occupancyCount: number
+  batterySocPct: number
+  batterySocKwh: number
+  solarAcPowerKw: number
+  criticalLoadKw: number
+  /** Kept in sync with hub pack inventory when provided. */
+  portablePacksAvailable: number
+}
+
 interface Props {
   currentHour: number
   onJumpToHour: (hour: number) => void
+  /** When set, shared metrics match hub indicators instead of drifting from the JSON alone. */
+  shared?: SharedIndicators
 }
 
 function Attr({
@@ -40,10 +53,22 @@ function Attr({
   )
 }
 
-export function OpenRemoteTelemetryPanel({ currentHour, onJumpToHour }: Props) {
+export function OpenRemoteTelemetryPanel({ currentHour, onJumpToHour, shared }: Props) {
   const summary = getOpenRemoteSummary()
   const snap = getOpenRemoteTelemetrySnapshot(currentHour)
-  const a = snap.attributes
+  const a = {
+    ...snap.attributes,
+    ...(shared
+      ? {
+          occupancyCount: shared.occupancyCount,
+          batterySocPct: shared.batterySocPct,
+          batterySocKwh: shared.batterySocKwh,
+          solarAcPowerKw: shared.solarAcPowerKw,
+          criticalLoadKw: shared.criticalLoadKw,
+          portablePacksAvailable: shared.portablePacksAvailable,
+        }
+      : null),
+  }
   const breachHour = summary.first_reserve_breach?.hour_index
 
   return (
@@ -178,12 +203,13 @@ export function OpenRemoteTelemetryPanel({ currentHour, onJumpToHour }: Props) {
           </button>
         </div>
         <p className="text-[10px] text-charcoal-muted leading-snug">
-          Scrubbing the outage timeline above also advances this OpenRemote hour (0–47). Battery{' '}
+          Scrubbing the outage timeline advances this OpenRemote hour (0–47). Battery{' '}
           <Battery className="inline w-3 h-3" aria-hidden="true" />, solar{' '}
           <Sun className="inline w-3 h-3" aria-hidden="true" />, load{' '}
-          <Activity className="inline w-3 h-3" aria-hidden="true" />, and occupancy{' '}
-          <Users className="inline w-3 h-3" aria-hidden="true" /> attributes match the Manager
-          asset contract in <code className="font-mono">src/data/openremote/asset-attributes.json</code>.
+          <Activity className="inline w-3 h-3" aria-hidden="true" />, occupancy{' '}
+          <Users className="inline w-3 h-3" aria-hidden="true" />, and packs ready stay married to
+          Demo Presentation Controls / role views. Attribute names match the Manager contract in{' '}
+          <code className="font-mono">src/data/openremote/asset-attributes.json</code>.
         </p>
       </div>
     </section>
