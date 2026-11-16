@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BatteryCharging,
   CloudRain,
+  Pause,
+  Play,
   RotateCcw,
   Signal,
   SignalZero,
@@ -17,6 +19,7 @@ import {
   isDaylightHour,
   isHubOvernightClosed,
 } from '../simulation/engine';
+import type { OpenRemoteScenarioId } from '../data/openremote/telemetry';
 import { DayWeatherSchedule, HubSimulationResult, WeatherMode } from '../types/hub';
 import { OpenRemoteTelemetryPanel } from './OpenRemoteTelemetryPanel';
 
@@ -37,6 +40,8 @@ interface DemoControlsDrawerProps {
   onDrainBattery10: () => void;
   onResetDemo: () => void;
   sim: HubSimulationResult;
+  openRemoteScenario: OpenRemoteScenarioId;
+  onChangeOpenRemoteScenario: (scenario: OpenRemoteScenarioId) => void;
 }
 
 export function DemoControlsDrawer({
@@ -56,7 +61,11 @@ export function DemoControlsDrawer({
   onDrainBattery10,
   onResetDemo,
   sim,
+  openRemoteScenario,
+  onChangeOpenRemoteScenario,
 }: DemoControlsDrawerProps) {
+  const [timelinePlaying, setTimelinePlaying] = useState(false);
+
   useEffect(() => {
     if (!open) return;
     const prevBodyOverflow = document.body.style.overflow;
@@ -68,6 +77,22 @@ export function DemoControlsDrawer({
       document.documentElement.style.overflow = prevHtmlOverflow;
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open) setTimelinePlaying(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (!timelinePlaying) return;
+    const id = window.setInterval(() => {
+      if (currentHour >= 48) {
+        setTimelinePlaying(false);
+        return;
+      }
+      onChangeHour(Math.min(48, currentHour + 1));
+    }, 900);
+    return () => window.clearInterval(id);
+  }, [timelinePlaying, currentHour, onChangeHour]);
 
   if (!open) return null;
 
@@ -142,16 +167,43 @@ export function DemoControlsDrawer({
                 {overnightClosed ? 'Closed overnight' : daylight ? 'Daylight' : 'Evening Open'}
               </span>
             </div>
-            <input
-              id="outage-hour-slider"
-              type="range"
-              min={0}
-              max={48}
-              step={1}
-              value={currentHour}
-              onChange={(e) => onChangeHour(Number(e.target.value))}
-              className="w-full h-3 accent-crimson cursor-pointer"
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!timelinePlaying && currentHour >= 48) {
+                    onChangeHour(0);
+                  }
+                  setTimelinePlaying((p) => !p);
+                }}
+                aria-pressed={timelinePlaying}
+                aria-label={timelinePlaying ? 'Pause outage timeline' : 'Play outage timeline'}
+                className={`min-w-[44px] min-h-[44px] rounded-xl border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
+                  timelinePlaying
+                    ? 'bg-crimson text-white border-crimson'
+                    : 'bg-gold text-gold-band-ink border-edge-strong hover:brightness-95'
+                }`}
+              >
+                {timelinePlaying ? (
+                  <Pause className="w-4 h-4" aria-hidden="true" />
+                ) : (
+                  <Play className="w-4 h-4" aria-hidden="true" />
+                )}
+              </button>
+              <input
+                id="outage-hour-slider"
+                type="range"
+                min={0}
+                max={48}
+                step={1}
+                value={currentHour}
+                onChange={(e) => {
+                  setTimelinePlaying(false);
+                  onChangeHour(Number(e.target.value));
+                }}
+                className="w-full h-3 accent-crimson cursor-pointer"
+              />
+            </div>
             <div className="flex justify-between text-xs font-mono tabular-nums text-charcoal-muted">
               <span>Hr 0 (8 AM D1)</span>
               <span>Hr 12 (8 PM D1)</span>
@@ -160,6 +212,26 @@ export function DemoControlsDrawer({
               <span>Hr 48</span>
             </div>
           </div>
+
+          {/* OpenRemote — prominent placement, collapsed by default to avoid scroll */}
+          <OpenRemoteTelemetryPanel
+            currentHour={currentHour}
+            onJumpToHour={(hour) => {
+              setTimelinePlaying(false);
+              onChangeHour(hour);
+            }}
+            defaultOpen={false}
+            scenario={openRemoteScenario}
+            onChangeScenario={onChangeOpenRemoteScenario}
+            shared={{
+              occupancyCount: headcount,
+              batterySocPct: sim.batteryPct,
+              batterySocKwh: sim.batteryKwh,
+              solarAcPowerKw: sim.solarKw,
+              criticalLoadKw: sim.totalLoadKw,
+              portablePacksAvailable: packsReady,
+            }}
+          />
 
           {/* Weather & Cell Service Toggles */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -272,19 +344,6 @@ export function DemoControlsDrawer({
               </button>
             </div>
           </div>
-
-          <OpenRemoteTelemetryPanel
-            currentHour={currentHour}
-            onJumpToHour={onChangeHour}
-            shared={{
-              occupancyCount: headcount,
-              batterySocPct: sim.batteryPct,
-              batterySocKwh: sim.batteryKwh,
-              solarAcPowerKw: sim.solarKw,
-              criticalLoadKw: sim.totalLoadKw,
-              portablePacksAvailable: packsReady,
-            }}
-          />
 
           {/* Instant Scenario Triggers */}
           <div className="space-y-2">
